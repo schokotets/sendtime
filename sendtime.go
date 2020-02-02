@@ -39,13 +39,20 @@ func main() {
 		StopBits: serial.OneStopBit,
 	}
 
-	fmt.Println("Warten auf nächste volle Sekunde...")
 	t := time.Now()
+	zone, _ := t.Zone()
+	dstbyte := byte(0) //daylight savings
+	if zone == "CEST" {
+		dstbyte = byte(1)
+	}
+
+	t = time.Now()
+	fmt.Println("Warten auf nächste volle Sekunde...")
 	time.Sleep(time.Duration(1000000000-t.Nanosecond()))
 
 	t = time.Now()
-	data := []byte{255, byte(t.Hour()), byte(t.Minute()), byte(t.Second())}
-	fmt.Printf("%v:%v:%v an %v senden...\n", data[1], data[2], data[3], selection)
+	data := []byte{255, byte(t.Hour()), byte(t.Minute()), byte(t.Second()), dstbyte}
+	fmt.Printf("%v:%v:%v + DST(%v) an %v senden...\n", data[1], data[2], data[3], data[4], selection)
 
 	port, err := serial.Open(selection, mode)
 	if err != nil {
