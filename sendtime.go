@@ -1,16 +1,16 @@
 package main
 
 import (
-	"go.bug.st/serial"
+	bserial "go.bug.st/serial"
+	"github.com/jacobsa/go-serial/serial"
 	"time"
 	"fmt"
 	"os"
 )
 
 func main() {
-	// https://godoc.org/go.bug.st/serial
 	fmt.Println("Alle seriellen Schnittstellen suchen...")
-	ports, err := serial.GetPortsList()
+	ports, err := bserial.GetPortsList()
 	if err != nil {
 		fmt.Printf("Error: %v\n", err)
 		os.Exit(1)
@@ -33,11 +33,12 @@ func main() {
 	}
 	selection := ports[sel]
 
-	mode := &serial.Mode{
+	options := serial.OpenOptions{
+		PortName: selection,
 		BaudRate: 1000000,
-		Parity: serial.NoParity,
 		DataBits: 8,
-		StopBits: serial.OneStopBit,
+		StopBits: 1,
+		RTSCTSFlowControl: false,
 	}
 
 	t := time.Now()
@@ -55,11 +56,12 @@ func main() {
 	data := []byte{255, byte(t.Hour()), byte(t.Minute()), byte(t.Second()), dstbyte}
 	fmt.Printf("%v:%v:%v + DST(%v) an %v senden...\n", data[1], data[2], data[3], data[4], selection)
 
-	port, err := serial.Open(selection, mode)
+	port, err := serial.Open(options)
 	if err != nil {
 		fmt.Printf("Error: %v\n", err)
 		os.Exit(1)
 	}
+	defer port.Close()
 
 	n, err := port.Write(data)
 	if err != nil {
