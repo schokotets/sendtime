@@ -1,11 +1,9 @@
 package main
 
 import (
-	"github.com/paulrademacher/climenu"
 	"go.bug.st/serial"
 	"time"
 	"fmt"
-	"log"
 	"os"
 )
 
@@ -14,23 +12,26 @@ func main() {
 	fmt.Println("Alle seriellen Schnittstellen suchen...")
 	ports, err := serial.GetPortsList()
 	if err != nil {
-		log.Fatal(err)
+		fmt.Printf("Error: %v\n", err)
+		os.Exit(1)
 	}
 	if len(ports) == 0 {
-		log.Fatal("Keine seriellen Schnittstellen gefunden!")
+		fmt.Println("Keine seriellen Schnittstellen gefunden!")
+		os.Exit(1)
 	}
 
-	menu := climenu.NewButtonMenu("\nTool, um die aktuelle Uhrzeit via USB zu senden\n"+
-		"Auswahl mit den Pfeiltasten, Bestätigen mit Enter, Abbrechen mit Esc",
-		"Wähle ein USB-Gerät aus")
-	for _, port := range ports {
-		menu.AddMenuItem(fmt.Sprintf("An %v senden", port), port)
+	fmt.Println("Tool, um die aktuelle Uhrzeit via USB zu senden")
+	for i, port := range ports {
+		fmt.Printf("%v) An %v senden\n", i, port)
 	}
+	fmt.Printf("Wähle ein USB-Gerät aus [%v-%v]: ", 0, len(ports)-1)
+	var sel int
+	_, err = fmt.Scanf("%d", &sel)
 
-	selection, escaped := menu.Run()
-	if escaped {
+	if err != nil || sel < 0 || sel >= len(ports) {
 		os.Exit(0)
 	}
+	selection := ports[sel]
 
 	mode := &serial.Mode{
 		BaudRate: 1000000,
@@ -56,12 +57,14 @@ func main() {
 
 	port, err := serial.Open(selection, mode)
 	if err != nil {
-		log.Fatal(err)
+		fmt.Printf("Error: %v\n", err)
+		os.Exit(1)
 	}
 
 	n, err := port.Write(data)
 	if err != nil {
-		log.Fatal(err)
+		fmt.Printf("Error: %v\n", err)
+		os.Exit(1)
 	}
 	fmt.Printf("%v Bytes gesendet\n", n)
 }
