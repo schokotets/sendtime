@@ -38,6 +38,7 @@ func main() {
 		BaudRate: 1000000,
 		DataBits: 8,
 		StopBits: 1,
+		MinimumReadSize: 4,
 		RTSCTSFlowControl: false,
 	}
 
