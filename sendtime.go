@@ -21,17 +21,29 @@ func main() {
 	}
 
 	fmt.Println("Tool, um die aktuelle Uhrzeit via USB zu senden")
-	for i, port := range ports {
-		fmt.Printf("%v) An %v senden\n", i, port)
-	}
-	fmt.Printf("Wähle ein USB-Gerät aus [%v-%v]: ", 0, len(ports)-1)
-	var sel int
-	_, err = fmt.Scanf("%d", &sel)
+	var selection string
+	if len(ports) == 1 {
+		fmt.Printf("Das USB-Gerät %v auswählen (j/n)? ", ports[0])
+		var sel string
+		_, err = fmt.Scanf("%s", &sel)
 
-	if err != nil || sel < 0 || sel >= len(ports) {
-		os.Exit(0)
+		if err != nil || sel != "j" && sel != "J" && sel != "y" && sel != "Y" {
+			os.Exit(0)
+		}
+		selection = ports[0]
+	} else {
+		for i, port := range ports {
+			fmt.Printf("%v) An %v senden\n", i, port)
+		}
+		fmt.Printf("Wähle ein USB-Gerät aus (%v-%v): ", 0, len(ports)-1)
+		var sel int
+		_, err = fmt.Scanf("%d", &sel)
+
+		if err != nil || sel < 0 || sel >= len(ports) {
+			os.Exit(0)
+		}
+		selection = ports[sel]
 	}
-	selection := ports[sel]
 
 	options := serial.OpenOptions{
 		PortName: selection,
