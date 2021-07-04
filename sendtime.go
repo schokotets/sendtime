@@ -51,12 +51,18 @@ func getPortSelection() (*string, error) {
 	var selection string
 	if len(ports) == 1 {
 		fmt.Printf("Das USB-Gerät %s auswählen (j/n)? ", ports[0])
+
 		var sel string
 		_, err = fmt.Scanf("%s", &sel)
 
-		if err != nil || sel != "j" && sel != "J" && sel != "y" && sel != "Y" {
+		if err != nil {
+			return fmt.Errorf("kann Antwort auf Port-Frage nicht lesen: %v", err)
+		}
+
+		if sel != "j" && sel != "J" && sel != "y" && sel != "Y" {
 			return nil, errors.New("einzig auswählbarer Port nicht ausgewählt")
 		}
+
 		selection = ports[0]
 	} else {
 		for i, port := range ports {
@@ -81,7 +87,7 @@ func sendTime(selection *string, options *serial.OpenOptions) error {
 	_, err := fmt.Scanf("%s", &sel)
 
 	if err != nil {
-		return errors.New("kann Antwort auf Sommerzeit-Frage nicht lesen")
+		return fmt.Errorf("kann Antwort auf Sommerzeit-Frage nicht lesen: %v", err)
 	}
 
 	dstbyte := byte(0) //daylight savings
