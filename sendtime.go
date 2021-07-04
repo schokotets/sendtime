@@ -18,7 +18,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	fmt.Printf("Auswahl getroffen: %s\n", *selection)
+	fmt.Printf("Port-Auswahl getroffen: %s\n", *selection)
 
 	options := serial.OpenOptions{
 		PortName:          *selection,
@@ -60,16 +60,16 @@ func getPortSelection() (*string, error) {
 		selection = ports[0]
 	} else {
 		for i, port := range ports {
-			fmt.Printf("%d) An %s senden\n", i, port)
+			fmt.Printf("%d) An %s senden\n", i+1, port)
 		}
-		fmt.Printf("Wähle ein USB-Gerät aus (%d-%d): ", 0, len(ports)-1)
+		fmt.Printf("Wähle ein USB-Gerät aus (%d-%d): ", 1, len(ports))
 		var sel int
 		_, err = fmt.Scanf("%d", &sel)
 
-		if err != nil || sel < 0 || sel >= len(ports) {
-			return nil, fmt.Errorf("ungültige Port-Auswahl - %d-%d wären möglich", 0, len(ports)-1)
+		if err != nil || sel < 1 || sel > len(ports) {
+			return nil, fmt.Errorf("ungültige Port-Auswahl - %d-%d wären möglich", 1, len(ports))
 		}
-		selection = ports[sel]
+		selection = ports[sel-1]
 	}
 	return &selection, nil
 }
