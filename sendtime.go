@@ -1,85 +1,122 @@
 package main
 
 import (
-	bserial "go.bug.st/serial"
-	"github.com/jacobsa/go-serial/serial"
-	"time"
+	"errors"
 	"fmt"
+	"github.com/jacobsa/go-serial/serial"
+	bserial "go.bug.st/serial"
 	"os"
+	"time"
 )
 
 func main() {
-	fmt.Println("Alle seriellen Schnittstellen suchen...")
-	ports, err := bserial.GetPortsList()
+	fmt.Println("Programm für die Binary-Clock, um die aktuelle Uhrzeit via USB zu senden")
+
+	selection, err := getPortSelection()
 	if err != nil {
-		fmt.Printf("Error: %v\n", err)
-		os.Exit(1)
-	}
-	if len(ports) == 0 {
-		fmt.Println("Keine seriellen Schnittstellen gefunden!")
+		fmt.Printf("Fehler bei der Port-Auswahl: %v\n", err)
 		os.Exit(1)
 	}
 
-	fmt.Println("Tool, um die aktuelle Uhrzeit via USB zu senden")
+	fmt.Printf("Auswahl getroffen: %s\n", *selection)
+
+	options := serial.OpenOptions{
+		PortName:          *selection,
+		BaudRate:          1000000,
+		DataBits:          8,
+		StopBits:          1,
+		MinimumReadSize:   4,
+		RTSCTSFlowControl: false,
+	}
+
+	sendTime(selection, &options)
+
+	if err != nil {
+		fmt.Printf("Fehler beim Senden der Zeit: %v\n", err)
+		os.Exit(1)
+	}
+}
+
+func getPortSelection() (*string, error) {
+	fmt.Println("Alle seriellen Schnittstellen suchen...")
+
+	ports, err := bserial.GetPortsList()
+	if err != nil {
+		return nil, err
+	}
+	if len(ports) == 0 {
+		return nil, errors.New("keine seriellen Schnittstellen gefunden")
+	}
+
 	var selection string
 	if len(ports) == 1 {
-		fmt.Printf("Das USB-Gerät %v auswählen (j/n)? ", ports[0])
+		fmt.Printf("Das USB-Gerät %s auswählen (j/n)? ", ports[0])
 		var sel string
 		_, err = fmt.Scanf("%s", &sel)
 
 		if err != nil || sel != "j" && sel != "J" && sel != "y" && sel != "Y" {
-			os.Exit(0)
+			return nil, errors.New("einzig auswählbarer Port nicht ausgewählt")
 		}
 		selection = ports[0]
 	} else {
 		for i, port := range ports {
-			fmt.Printf("%v) An %v senden\n", i, port)
+			fmt.Printf("%d) An %s senden\n", i, port)
 		}
-		fmt.Printf("Wähle ein USB-Gerät aus (%v-%v): ", 0, len(ports)-1)
+		fmt.Printf("Wähle ein USB-Gerät aus (%d-%d): ", 0, len(ports)-1)
 		var sel int
 		_, err = fmt.Scanf("%d", &sel)
 
 		if err != nil || sel < 0 || sel >= len(ports) {
-			os.Exit(0)
+			return nil, fmt.Errorf("ungültige Port-Auswahl - %d-%d wären möglich", 0, len(ports)-1)
 		}
 		selection = ports[sel]
 	}
+	return &selection, nil
+}
 
-	options := serial.OpenOptions{
-		PortName: selection,
-		BaudRate: 1000000,
-		DataBits: 8,
-		StopBits: 1,
-		MinimumReadSize: 4,
-		RTSCTSFlowControl: false,
+func sendTime(selection *string, options *serial.OpenOptions) error {
+	fmt.Printf("Ist gerade Sommerzeit? (j/n): ")
+
+	var sel string
+	_, err := fmt.Scanf("%s", &sel)
+
+	if err != nil {
+		return errors.New("kann Antwort auf Sommerzeit-Frage nicht lesen")
 	}
 
-	t := time.Now()
-	zone, _ := t.Zone()
 	dstbyte := byte(0) //daylight savings
-	if zone == "CEST" {
+
+	if sel == "j" || sel == "J" || sel == "y" || sel == "Y" {
 		dstbyte = byte(1)
 	}
 
-	t = time.Now()
+	// wait for next full second
+	// note: this won't be perfectly precise because logging and opening the port takes time
+	t := time.Now()
 	fmt.Println("Warten auf nächste volle Sekunde...")
-	time.Sleep(time.Duration(1000000000-t.Nanosecond()))
+	time.Sleep(time.Duration(1000000000 - t.Nanosecond()))
 
+	// prepare data
 	t = time.Now()
-	data := []byte{255, byte(t.Hour()), byte(t.Minute()), byte(t.Second()), dstbyte}
-	fmt.Printf("%v:%v:%v + DST(%v) an %v senden...\n", data[1], data[2], data[3], data[4], selection)
+	data := []byte{0x82, byte(t.Second()), byte(t.Minute()), byte(t.Hour()), dstbyte, 0x81}
+	fmt.Printf("%v:%v:%v + DST(%v) an %v senden...\n", data[3], data[2], data[1], data[4], *selection)
 
-	port, err := serial.Open(options)
+	return openAndSend(options, &data)
+}
+
+func openAndSend(options *serial.OpenOptions, data *[]byte) error {
+	// open port
+	port, err := serial.Open(*options)
 	if err != nil {
-		fmt.Printf("Error: %v\n", err)
-		os.Exit(1)
+		return fmt.Errorf("beim Öffnen des Ports: %v", err)
 	}
 	defer port.Close()
 
-	n, err := port.Write(data)
+	// write data
+	n, err := port.Write(*data)
 	if err != nil {
-		fmt.Printf("Error: %v\n", err)
-		os.Exit(1)
+		return fmt.Errorf("beim Senden der Daten: %v", err)
 	}
-	fmt.Printf("%v Bytes gesendet\n", n)
+	fmt.Printf("%d Bytes gesendet\n", n)
+	return nil
 }
