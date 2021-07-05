@@ -72,7 +72,11 @@ func getPortSelection() (*string, error) {
 		var sel int
 		_, err = fmt.Scanf("%d", &sel)
 
-		if err != nil || sel < 1 || sel > len(ports) {
+		if err != nil {
+			return fmt.Errorf("kann Antwort auf Port-Frage nicht lesen: %v", err)
+		}
+
+		if sel < 1 || sel > len(ports) {
 			return nil, fmt.Errorf("ungültige Port-Auswahl - %d-%d wären möglich", 1, len(ports))
 		}
 		selection = ports[sel-1]
