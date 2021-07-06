@@ -56,7 +56,7 @@ func getPortSelection() (*string, error) {
 		_, err = fmt.Scanf("%s", &sel)
 
 		if err != nil {
-			return fmt.Errorf("kann Antwort auf Port-Frage nicht lesen: %v", err)
+			return nil, fmt.Errorf("kann Antwort auf Port-Frage nicht lesen: %v", err)
 		}
 
 		if sel != "j" && sel != "J" && sel != "y" && sel != "Y" {
@@ -73,7 +73,7 @@ func getPortSelection() (*string, error) {
 		_, err = fmt.Scanf("%d", &sel)
 
 		if err != nil {
-			return fmt.Errorf("kann Antwort auf Port-Frage nicht lesen: %v", err)
+			return nil, fmt.Errorf("kann Antwort auf Port-Frage nicht lesen: %v", err)
 		}
 
 		if sel < 1 || sel > len(ports) {
