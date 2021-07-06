@@ -109,7 +109,7 @@ func sendTime(selection *string, options *serial.OpenOptions) error {
 	// prepare data
 	t = time.Now()
 	data := []byte{0x82, byte(t.Second()), byte(t.Minute()), byte(t.Hour()), dstbyte, 0x81}
-	fmt.Printf("%v:%v:%v + DST(%v) an %v senden...\n", data[3], data[2], data[1], data[4], *selection)
+	fmt.Printf("0x82, %ds %dm %dh, DST(%x), 0x81 an %s senden...\n", data[1], data[2], data[3], data[4], *selection)
 
 	return openAndSend(options, &data)
 }
