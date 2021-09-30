@@ -95,7 +95,7 @@ func chooseAction() (int, error) {
 	fmt.Print("Wähle eine Aktion aus (1-5): ")
 
 	var sel int
-	_, err := fmt.Scanf("%d", &sel)
+	_, err := fmt.Scan(&sel)
 
 	if err != nil {
 		return 0, fmt.Errorf("kann Antwort auf Aktions-Frage nicht lesen: %v", err)
@@ -122,7 +122,7 @@ func getPortSelection() (*string, error) {
 		fmt.Printf("Das USB-Gerät %s auswählen (j/n)? ", ports[0])
 
 		var sel string
-		_, err = fmt.Scanf("%s", &sel)
+		_, err = fmt.Scan(&sel)
 
 		if err != nil {
 			return nil, fmt.Errorf("kann Antwort auf Port-Frage nicht lesen: %v", err)
@@ -139,7 +139,7 @@ func getPortSelection() (*string, error) {
 		}
 		fmt.Printf("Wähle ein USB-Gerät aus (%d-%d): ", 1, len(ports))
 		var sel int
-		_, err = fmt.Scanf("%d", &sel)
+		_, err = fmt.Scan(&sel)
 
 		if err != nil {
 			return nil, fmt.Errorf("kann Antwort auf Port-Frage nicht lesen: %v", err)
@@ -157,7 +157,7 @@ func sendTime(selection *string, options *serial.OpenOptions) error {
 	fmt.Print("Ist gerade Sommerzeit? (j/n): ")
 
 	var sel string
-	_, err := fmt.Scanf("%s", &sel)
+	_, err := fmt.Scan(&sel)
 
 	if err != nil {
 		return fmt.Errorf("kann Antwort auf Sommerzeit-Frage nicht lesen: %v", err)
@@ -217,7 +217,7 @@ func getColorValue(colorname string) (byte, error) {
 	fmt.Printf("%s-Wert (0-255)? ", colorname)
 
 	var sel int
-	_, err := fmt.Scanf("%d", &sel)
+	_, err := fmt.Scan(&sel)
 
 	if err != nil {
 		return 0, fmt.Errorf("kann Antwort auf %s-Wert-Frage nicht lesen: %v", colorname, err)
