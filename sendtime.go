@@ -10,7 +10,7 @@ import (
 )
 
 func main() {
-	fmt.Println("Programm für die Binary-Clock, um die aktuelle Uhrzeit via USB zu senden")
+	fmt.Println("Programm für die Konfiguration der Binary-Clock via USB")
 
 	selection, err := getPortSelection()
 	if err != nil {
@@ -29,12 +29,81 @@ func main() {
 		RTSCTSFlowControl: false,
 	}
 
-	sendTime(selection, &options)
+	actionCode, err := chooseAction()
 
 	if err != nil {
-		fmt.Printf("Fehler beim Senden der Zeit: %v\n", err)
+		fmt.Printf("Fehler beim Wählen der Aktion: %v\n", err)
 		os.Exit(1)
 	}
+
+	switch actionCode {
+	case 1:
+		err = sendTime(selection, &options)
+
+		if err != nil {
+			fmt.Printf("Fehler beim Senden der Zeit: %v\n", err)
+			os.Exit(1)
+		}
+
+	case 2:
+		err = sendColor(selection, &options, "Stunden", 0x83)
+
+		if err != nil {
+			fmt.Printf("Fehler beim Senden der Farbe der Stunden: %v\n", err)
+			os.Exit(1)
+		}
+
+	case 3:
+		err = sendColor(selection, &options, "Minuten", 0x84)
+
+		if err != nil {
+			fmt.Printf("Fehler beim Senden der Farbe der Minuten: %v\n", err)
+			os.Exit(1)
+		}
+
+	case 4:
+		err = sendColor(selection, &options, "Sekunden", 0x85)
+
+		if err != nil {
+			fmt.Printf("Fehler beim Senden der Farbe der Sekunden: %v\n", err)
+			os.Exit(1)
+		}
+
+	case 5:
+		err = sendColor(selection, &options, "Rand", 0x86)
+
+		if err != nil {
+			fmt.Printf("Fehler beim Senden der Farbe des Rands: %v\n", err)
+			os.Exit(1)
+		}
+
+		// omitting default case
+		// because only 1-5 is possible from chooseAction
+
+	}
+
+}
+
+func chooseAction() (int, error) {
+	fmt.Println()
+	fmt.Println("1) Aktuelle Uhrzeit senden")
+	fmt.Println("2) Farbe der Stunden-LEDs ändern")
+	fmt.Println("3) Farbe der Minuten-LEDs ändern")
+	fmt.Println("4) Farbe der Sekunden-LEDs ändern")
+	fmt.Println("5) Farbe der Rand-LEDs ändern")
+	fmt.Println()
+	fmt.Print("Wähle eine Aktion aus (1-5): ")
+
+	var sel int
+	_, err := fmt.Scanf("%d", &sel)
+
+	if err != nil {
+		return 0, fmt.Errorf("kann Antwort auf Aktions-Frage nicht lesen: %v", err)
+	}
+	if sel < 1 || sel > 5 {
+		return 0, fmt.Errorf("ungültige Aktions-Auswahl - 1-5 wären möglich")
+	}
+	return sel, nil
 }
 
 func getPortSelection() (*string, error) {
@@ -85,7 +154,7 @@ func getPortSelection() (*string, error) {
 }
 
 func sendTime(selection *string, options *serial.OpenOptions) error {
-	fmt.Printf("Ist gerade Sommerzeit? (j/n): ")
+	fmt.Print("Ist gerade Sommerzeit? (j/n): ")
 
 	var sel string
 	_, err := fmt.Scanf("%s", &sel)
@@ -100,6 +169,8 @@ func sendTime(selection *string, options *serial.OpenOptions) error {
 		dstbyte = byte(1)
 	}
 
+	fmt.Println()
+
 	// wait for next full second
 	// note: this won't be perfectly precise because logging and opening the port takes time
 	t := time.Now()
@@ -112,6 +183,50 @@ func sendTime(selection *string, options *serial.OpenOptions) error {
 	fmt.Printf("0x82, %ds %dm %dh, DST(%x), 0x81 an %s senden...\n", data[1], data[2], data[3], data[4], *selection)
 
 	return openAndSend(options, &data)
+}
+
+func sendColor(selection *string, options *serial.OpenOptions, area string, startbyte byte) error {
+	fmt.Println("Die Farbe ist nach RGB-Modell in einen Rot-, Grün- und Blauwert aufgeteilt.")
+	fmt.Printf("Konfiguration der Farbe der %s-LEDs\n", area)
+
+	red, err := getColorValue("Rot")
+	if err != nil {
+		return err
+	}
+
+	green, err := getColorValue("Grün")
+	if err != nil {
+		return err
+	}
+
+	blue, err := getColorValue("Blau")
+	if err != nil {
+		return err
+	}
+
+	fmt.Println()
+
+	data := []byte{startbyte, green, red, blue}
+	fmt.Println("Die angegebenen Werte wurden durch 2 geteilt, da die Komponenten nur 0-127 sein können.")
+	fmt.Printf("0x%x, Grün %d, Rot %d, Blau %d an %s senden...\n", data[0], data[1], data[2], data[3], *selection)
+
+	return openAndSend(options, &data)
+}
+
+func getColorValue(colorname string) (byte, error) {
+	fmt.Printf("%s-Wert (0-255)? ", colorname)
+
+	var sel int
+	_, err := fmt.Scanf("%d", &sel)
+
+	if err != nil {
+		return 0, fmt.Errorf("kann Antwort auf %s-Wert-Frage nicht lesen: %v", colorname, err)
+	}
+	if sel < 0 || sel > 255 {
+		return 0, fmt.Errorf("ungültiger %s-Wert - 0-255 wären möglich", colorname)
+	}
+
+	return byte(sel) / 2, nil
 }
 
 func openAndSend(options *serial.OpenOptions, data *[]byte) error {
